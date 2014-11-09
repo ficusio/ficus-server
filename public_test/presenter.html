@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Test</title>
+  </head>
+  <body>
+    <button id="btnStart">Start presentation</button>
+    <button id="btnFinish">Finish presentation</button>
+    <br>
+    <button id="btnStartPoll">Start poll</button>
+    <button id="btnFinishPoll">Finish poll</button>
+
+    <script src="/sockjs-0.3.4.js"></script>
+    <script src="/jquery.min.js"></script>
+    <script src="/cookie-utils.js"></script>
+    <script src="/presenter-api.js"></script>
+
+    <script type="text/javascript">
+
+      var api = new API('/api'),
+          $pollName = $('#poll-name'),
+          $pollOpts = $('#poll-opts');
+
+      $('#btnStart').click(function () {
+        api.start();
+      });
+
+      $('#btnFinish').click(function () {
+        api.finish();
+      });
+
+      $('#btnStartPoll').click(function () {
+        api.startPoll('' + Math.floor(10000 * Math.random()), {
+          title: 'Test poll 1',
+          options: [{
+            label: 'Option 1',
+            color: '#ff0000'
+          }, {
+            label: 'Option 2',
+            color: '#00ff00'
+          }, {
+            label: 'Option 3',
+            color: '#0000ff'
+          }]
+        });
+      });
+
+      $('#btnFinishPoll').click(function () {
+        api.finishPoll();
+      });
+
+    </script>
+  </body>
+</html>
