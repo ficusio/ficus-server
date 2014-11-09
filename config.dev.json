@@ -1,0 +1,19 @@
+{
+  "name": "feynman",
+  "debug": "app*",
+  "nodeArgs": ["--harmony"],
+  "net": {
+    "hostName": "codehipsters.com",
+    "host": "0.0.0.0",
+    "startPort": 4001,
+    "numInstances": 1
+  },
+  "db": {
+    "prefix": "feynman"
+  },
+  "crypto": {
+    "cookieKeys": ["haba-haba"]
+  },
+  "sockjsUrl": "http://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js",
+  "websocketApiPrefix": "/api"
+}
