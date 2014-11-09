@@ -1,0 +1,17 @@
+{
+  "apps": [
+    {
+      "exec_mode": "fork_mode",
+      "script": "index.js",
+      "name": "feynman",
+      "node_args": [],
+      "env": {
+        "PORT": 80,
+        "NODE_ENV": "dev",
+        "DEBUG": "app*"
+      },
+      "error_file": "/var/www/logs/feynman.err.log",
+      "out_file": "/var/www/logs/feynman.out.log"
+    }
+  ]
+}
