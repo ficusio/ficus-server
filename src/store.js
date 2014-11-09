@@ -8,7 +8,7 @@ function stringify(obj)
 }
 
 
-var MOOD_DT = 30000;
+var MOOD_EXPIRY_TIME = 15000;
 
 
 class Presentation
@@ -195,40 +195,47 @@ class Presentation
           expiredVotes = 0,
           clientMood = 0;
 
-      //this.debug(`  client ${ clientId }, total votes: ${ totalVotes }`);
+      this.debug(`  client ${ clientId }, total votes: ${ totalVotes }`);
 
-      if (totalVotes > 0)
+      var lastChangeIndex = -1,
+          lastChangeSign = 0;
+
+      for (var i = 0; i < totalVotes; ++i)
       {
-        for (var i = 0; i < totalVotes; ++i)
+        var { time, delta } = moodVotes[i];
+
+        var timePassed = timeNow - time;
+        if (timePassed > MOOD_EXPIRY_TIME)
         {
-          var { time, delta } = moodVotes[i];
-
-          //this.debug(`      vote: time ${ time }, delta ${ delta }`);
-
-          var timePassed = timeNow - time,
-              normCoeff = 1 - Math.min(1, Math.max(0, timePassed / MOOD_DT));
-
-          //this.debug(`      timePassed: ${ timePassed }, normCoeff ${ normCoeff }`);
-
-          if (normCoeff < 0.01)
-          {
-            //this.debug(`      vote expired`);
-            ++expiredVotes;
-          }
-          else {
-            clientMood += delta * normCoeff;
-          }
+          ++expiredVotes;
         }
-
-        clientMood /= (totalVotes - expiredVotes);
-        moodVotes.splice(0, expiredVotes);
-
-        //this.debug(`    client mood: ${ clientMood }`);
-
-        meanMood += clientMood;
-
-        //this.debug(`    mood now: ${ meanMood }`);
+        else if (delta != lastChangeSign)
+        {
+          lastChangeSign = delta;
+          lastChangeIndex = i;
+        }
       }
+
+      this.debug('  lastChange sign ' + lastChangeSign + ', index ' + lastChangeIndex + ', time ' + timePassed);
+
+      if (expiredVotes > 0)
+      {
+        moodVotes.splice(0, expiredVotes);
+      }
+
+      if (lastChangeSign != 0)
+      {
+        clientMood = lastChangeSign * Math.min(1, Math.max(0, 1 - timePassed / MOOD_EXPIRY_TIME));
+      }
+      else {
+        clientMood = 0;
+      }
+
+      //this.debug(`    client mood: ${ clientMood }`);
+
+      meanMood += clientMood;
+
+      //this.debug(`    mood now: ${ meanMood }`);
 
       ++totalClients;
     }
