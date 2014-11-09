@@ -16,6 +16,7 @@
     "lodash": "^2.4.1",
     "node-uuid": "^1.4.1",
     "sockjs": "^0.3.10"
+    "ntwitter": "0.5.0"
   },
   "devDependencies": {},
   "scripts": {

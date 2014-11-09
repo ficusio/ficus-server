@@ -6,13 +6,17 @@ var debug = require('debug')('app:ws-api'),
     ClientConnection = require('./client-connection'),
     store = require('./store'),
     P = require('./ws-protocol'),
-    MESSAGE = P.message;
+    MESSAGE = P.message,
+    TwitterWatcher = require('./twitter-watcher'),
+    twitterConfig = require('./config').twitter,
+    _ = require('lodash');
 
 
 var stateByPresentationId = {},
     connectionsByClientId = {},
     MEAN_MOOD_INTERVAL = 1000,
-    meanMoodIntvId = -1;
+    meanMoodIntvId = -1,
+    twitterWatcher;
 
 
 function onNewConnection (sockJSConn)
@@ -93,6 +97,7 @@ function onPresenterStart (conn)
   if (presentation && presentation.start()) {
     broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
     startMeanMoodTimer();
+    startWatchingTwitter();
   }
 }
 
@@ -104,6 +109,7 @@ function onPresenterFinish (conn)
   {
     broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
     stopMeanMoodTimer();
+    stopWatchingTwitter();
   }
 }
 
@@ -338,4 +344,45 @@ function updateMeanMood ()
   {
     console.error('error updating mean mood:', (e && e.stack) || e);
   }
+}
+
+function startWatchingTwitter (hashtag = null)
+{
+  stopWatchingTwitter();
+
+  if (twitterConfig)
+  {
+    var opts = _.extend({}, twitterConfig);
+    if (hashtag) opts.watchTags.push(hashtag);
+    twitterWatcher = new TwitterWatcher(opts);
+    twitterWatcher.on(TwitterWatcher.NEW_TWEET, onNewTweet);
+    twitterWatcher.startWatch();
+  }
+  else {
+    debug('startWatchingTwitter: no twitter config');
+  }
+}
+
+function stopWatchingTwitter ()
+{
+  if (twitterWatcher)
+  {
+    twitterWatcher.stopWatch();
+    twitterWatcher.removeAllListeners();
+    twitterWatcher = null;
+  }
+}
+
+function onNewTweet (tweet)
+{
+  debug('new tweet: ' + JSON.stringify(tweet, null, '  '));
+
+  var presentation = store.getActivePresentation();
+  if (presentation == null) return;
+
+  notifyPresenter(presentation, MESSAGE.out_pres_question, {
+    type: 'twitter',
+    message: tweet.text,
+    userId: tweet.user
+  });
 }

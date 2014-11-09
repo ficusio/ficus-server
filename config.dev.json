@@ -15,5 +15,12 @@
     "cookieKeys": ["haba-haba"]
   },
   "sockjsUrl": "http://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js",
-  "websocketApiPrefix": "/api"
+  "websocketApiPrefix": "/api",
+  "twitter": {
+    "consumer_key": "",
+    "consumer_secret": "",
+    "access_token_key": "",
+    "access_token_secret": "",
+    "watchTags": [ "#tag1", "#tag2" ]
+  }
 }
