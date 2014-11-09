@@ -10,7 +10,9 @@ var debug = require('debug')('app:ws-api'),
 
 
 var stateByPresentationId = {},
-    connectionsByClientId = {};
+    connectionsByClientId = {},
+    MEAN_MOOD_INTERVAL = 1000,
+    meanMoodIntvId = -1;
 
 
 function onNewConnection (sockJSConn)
@@ -88,18 +90,21 @@ function onPresenter (conn, presentation, presentationState)
 function onPresenterStart (conn)
 {
   var presentation = store.getPresentationById(conn.presentationId);
-  if (presentation == null) return;
-  presentation.start();
-  broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
+  if (presentation && presentation.start()) {
+    broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
+    startMeanMoodTimer();
+  }
 }
 
 
 function onPresenterFinish (conn)
 {
   var presentation = store.getPresentationById(conn.presentationId);
-  if (presentation == null) return;
-  presentation.finish();
-  broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
+  if (presentation && presentation.finish())
+  {
+    broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
+    stopMeanMoodTimer();
+  }
 }
 
 
@@ -167,8 +172,7 @@ function onClientVoteUp (conn)
 {
   var presentation = store.getPresentationById(conn.presentationId);
   if (presentation == null) return;
-  presentation.voteUp();
-  // TODO: calculate and update mood
+  presentation.voteUp(conn.clientId);
 }
 
 
@@ -176,8 +180,7 @@ function onClientVoteDown (conn)
 {
   var presentation = store.getPresentationById(conn.presentationId);
   if (presentation == null) return;
-  presentation.voteDown();
-  // TODO: calculate and update mood
+  presentation.voteDown(conn.clientId);
 }
 
 
@@ -191,7 +194,7 @@ function onClientQuestion (conn, msg)
     userId: conn.clientId,
   };
   presentation.addMessage(msg);
-  notifyPresenter(presentation, MESSAGE.out_pres_question, msg);
+  notifyPresenter(presentation, MESSAGE.out_pres_question, message);
 }
 
 
@@ -306,5 +309,33 @@ function cleanUpPresentationStateIfNeeded (presentationState)
   {
     delete stateByPresentationId[ presentationState.presentationId ];
     debug(`removed empty state for presentation with id ${ presentationState.presentationId }`);
+  }
+}
+
+
+function startMeanMoodTimer ()
+{
+  meanMoodIntvId = setInterval(updateMeanMood, MEAN_MOOD_INTERVAL);
+}
+
+
+function stopMeanMoodTimer ()
+{
+  clearInterval(meanMoodIntvId);
+}
+
+
+function updateMeanMood ()
+{
+  try 
+  {
+    var presentation = store.getActivePresentation();
+    if (presentation == null) return;
+    var mood = presentation.updateMood();
+    notifyPresenter(presentation, MESSAGE.out_pres_audience_mood, mood);
+  }
+  catch (e)
+  {
+    console.error('error updating mean mood:', (e && e.stack) || e);
   }
 }

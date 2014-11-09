@@ -8,6 +8,9 @@ function stringify(obj)
 }
 
 
+var MOOD_DT = 30000;
+
+
 class Presentation
 {
   
@@ -16,6 +19,7 @@ class Presentation
     this.id = id;
     this.state = P.presentation_state.not_started;
     this.totalClients = 0;
+    this.meanMood = 0;
     this.clientsById = {};
     this.presenterId = null;
     this.messages = [];
@@ -36,15 +40,27 @@ class Presentation
 
   start ()
   {
+    if (this.state != P.presentation_state.not_started)
+    {
+      debug('start: invalid current state ' + this.state);
+      return false;
+    }
     this.state = P.presentation_state.active;
     this.debug('started');
+    return true;
   }
 
 
   finish ()
   {
+    if (this.state != P.presentation_state.active)
+    {
+      debug('finish: invalid current state ' + this.state);
+      return false;
+    }
     this.state = P.presentation_state.ended;
     this.debug('finished');
+    return true;
   }
 
 
@@ -57,11 +73,13 @@ class Presentation
 
   startPollAndGetEmptyResults (poll)
   {
-    if (this.pollsById[ poll.id ])
+    var pollWithResults = this.pollsById[ poll.id ];
+    if (pollWithResults)
     {
-      return this.debug('poll was already started');
+      this.debug('poll was already started');
+      return pollWithResults;
     }
-    var pollWithResults = {
+    pollWithResults = {
       poll: poll,
       results: emptyPollResultsForPoll(poll)
     };
@@ -137,13 +155,98 @@ class Presentation
 
   voteUp (clientId)
   {
-
+    this._vote(clientId, +1);
   }
 
 
   voteDown (clientId)
   {
+    this._vote(clientId, -1);
+  }
 
+
+  _vote (clientId, delta)
+  {
+    var client = this.clientsById[ clientId ];
+    if (client == null)
+    {
+      return this.debug(`vote ${ clientId }: client not found`);
+    }
+    var time = Date.now();
+    client.moodVotes.push({ time, delta });
+    this.debug(`client ${ clientId } new mood vote:`, { time, delta });
+  }
+
+
+  updateMood ()
+  {
+    var timeNow = Date.now(),
+        clientsById = this.clientsById,
+        totalClients = 0,
+        meanMood = 0;
+
+    //this.debug('updateMood');
+
+    for (var clientId in clientsById)
+    {
+      var client = clientsById[ clientId ],
+          moodVotes = client.moodVotes,
+          totalVotes = moodVotes.length,
+          expiredVotes = 0,
+          clientMood = 0;
+
+      //this.debug(`  client ${ clientId }, total votes: ${ totalVotes }`);
+
+      if (totalVotes > 0)
+      {
+        for (var i = 0; i < totalVotes; ++i)
+        {
+          var { time, delta } = moodVotes[i];
+
+          //this.debug(`      vote: time ${ time }, delta ${ delta }`);
+
+          var timePassed = timeNow - time,
+              normCoeff = 1 - Math.min(1, Math.max(0, timePassed / MOOD_DT));
+
+          //this.debug(`      timePassed: ${ timePassed }, normCoeff ${ normCoeff }`);
+
+          if (normCoeff < 0.01)
+          {
+            //this.debug(`      vote expired`);
+            ++expiredVotes;
+          }
+          else {
+            clientMood += delta * normCoeff;
+          }
+        }
+
+        clientMood /= (totalVotes - expiredVotes);
+        moodVotes.splice(0, expiredVotes);
+
+        //this.debug(`    client mood: ${ clientMood }`);
+
+        meanMood += clientMood;
+
+        //this.debug(`    mood now: ${ meanMood }`);
+      }
+
+      ++totalClients;
+    }
+
+    //this.debug(`  total clients: ${ meanMood }`);
+
+    if (totalClients > 0)
+    {
+      meanMood /= totalClients;
+    }
+    else {
+      meanMood = 0;
+    }
+
+    //this.debug(`  mean mood: ${ meanMood }`);
+
+    this.meanMood = meanMood;
+    return meanMood;
   }
 
 
@@ -152,30 +255,30 @@ class Presentation
     var pollWithResults = this.poll;
     if (pollWithResults == null)
     {
-      return debug('answerPollAndGetResults: no active poll');
+      return this.debug('answerPollAndGetResults: no active poll');
     }
 
     var { poll, results } = pollWithResults;
     var totalOptions = results.length;
 
-    debug('results', results, 'totalOptions', totalOptions);
+    this.debug('results', results, 'totalOptions', totalOptions);
 
     if (optionIndex >= totalOptions)
     {
-      return debug('answerPollAndGetResults: invalid index');
+      return this.debug('answerPollAndGetResults: invalid index');
     }
 
     var client = this.clientsById[ clientId ];
     if (client == null)
     {
-      return debug(`answerPollAndGetResults: client with id ${ clientId } not found`);
+      return this.debug(`answerPollAndGetResults: client with id ${ clientId } not found`);
     }
 
     var prevOptionIndex = client.votesByPollId[ poll.id ];
-    debug('prevOptionIndex', prevOptionIndex);
+    this.debug('prevOptionIndex', prevOptionIndex);
     if (prevOptionIndex == optionIndex)
     {
-      return debug('answerPollAndGetResults: vote is not changed');
+      return this.debug('answerPollAndGetResults: vote is not changed');
     }
 
     client.votesByPollId[ poll.id ] = optionIndex;
@@ -186,7 +289,7 @@ class Presentation
     }
     ++results[ optionIndex ].count;
 
-    debug('now results', results);
+    this.debug('now results', results);
 
     var totalVoters = 0,
         i;
@@ -198,16 +301,16 @@ class Presentation
 
     var normCoeff = (totalVoters == 0) ? 0 : 1 / totalVoters;
 
-    debug('totalVoters', totalVoters, 'normCoeff', normCoeff);
+    this.debug('totalVoters', totalVoters, 'normCoeff', normCoeff);
 
     for (i = 0; i < totalOptions; ++i)
     {
       var result = results[i];
       result.weight = result.count * normCoeff;
-      debug('  results[' + i + ']:', result);
+      this.debug('  results[' + i + ']:', result);
     }
 
-    debug('new poll vote, now results:', stringify(results));
+    this.debug('new poll vote, now results:', stringify(results));
 
     return results;
   }
@@ -220,7 +323,8 @@ function createNewClientWithId (clientId)
   return {
     id: clientId,
     active: true,
-    votesByPollId: {}
+    votesByPollId: {},
+    moodVotes: []
   }
 }
 
