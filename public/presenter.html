@@ -5,19 +5,16 @@
     <title>Test</title>
   </head>
   <body>
-    <button id="btnMessage">Send message</button><br>
-    <button id="btnVoteDown">Vote Down</button>
-    <button id="btnVoteUp">Vote Up</button>
-
-    <div id="poll">
-      <div id="poll-name">No active poll</div>
-      <div id="poll-opts"></div>
-    </div>
+    <button id="btnStart">Start presentation</button>
+    <button id="btnFinish">Finish presentation</button>
+    <br>
+    <button id="btnStartPoll">Start poll</button>
+    <button id="btnFinishPoll">Finish poll</button>
 
     <script src="/sockjs-0.3.4.js"></script>
     <script src="/jquery.min.js"></script>
-    <script src="/utils.js"></script>
-    <script src="/api.js"></script>
+    <script src="/cookie-utils.js"></script>
+    <script src="/presenter-api.js"></script>
 
     <script type="text/javascript">
 
@@ -25,54 +22,33 @@
           $pollName = $('#poll-name'),
           $pollOpts = $('#poll-opts');
 
-      $('#btnMessage').click(function () {
-        api.sendFeedback('test question');
+      $('#btnStart').click(function () {
+        api.start();
       });
 
-      $('#btnVoteUp').click(function () {
-        api.voteUp();
+      $('#btnFinish').click(function () {
+        api.finish();
       });
 
-      $('#btnVoteDown').click(function () {
-        api.voteDown();
+      $('#btnStartPoll').click(function () {
+        api.startPoll('' + Math.floor(10000 * Math.random()), {
+          title: 'Test poll 1',
+          options: [{
+            label: 'Option 1',
+            color: '#ff0000'
+          }, {
+            label: 'Option 2',
+            color: '#00ff00'
+          }, {
+            label: 'Option 3',
+            color: '#0000ff'
+          }]
+        });
       });
 
-      api.onPollStarted = startPoll;
-
-      api.onInitialState = function (state)
-      {
-        if (state.poll) startPoll(poll);
-      }
-
-      function startPoll (poll)
-      {
-        var totalOpts = poll.options.length,
-            html = '';
-
-        for (var i = 0; i < totalOpts; ++i)
-        {
-          var opt = poll.options[i];
-          html += '<button data-index="' + i + '">' + opt.name + '</button>'
-        }
-
-        $pollOpts.html(html);
-        $pollName.html('Poll "' + poll.name + '":');
-      };
-
-      api.onPollEnded = function ()
-      {
-        $pollOpts.html('');
-        $pollName.html('No active poll');
-      };
-
-      $pollOpts.click(function (evt)
-      {
-        var index = +$(evt.target).attr('data-index');
-        if (isNaN(index)) return;
-        api.answer(index);
-        $pollOpts.find('button').prop('disabled', true);
+      $('#btnFinishPoll').click(function () {
+        api.finishPoll();
       });
-
 
     </script>
   </body>

@@ -101,6 +101,7 @@ class APIImpl
 
 
   on_initial_state: (initialState) ->
+    @poll = initialState.poll
     @callback 'onInitialState', initialState
 
 
@@ -110,7 +111,7 @@ class APIImpl
 
   on_poll: (poll) ->
     @poll = poll
-    if poll?
+    if poll
       @callback 'onPollStarted', poll
     else
       @callback 'onPollEnded'

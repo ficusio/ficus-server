@@ -40,7 +40,8 @@ class ClientConnection extends EventEmitter
 
   write (str)
   {
-    this.sockJSConn && this.sockJSConn.write(str);
+    //debug(`client ${ this.clientId } write: ${ str }`);
+    this._sockJsConn && this._sockJsConn.write(str);
   }
 
 
@@ -97,6 +98,7 @@ class ClientConnection extends EventEmitter
     }
     catch (e) {
       console.warn(`error handling message "${ str }" from client ${ this.clientId }: ${ e }`);
+      if (e && e.stack) console.log(e.stack);
     }
   }
 

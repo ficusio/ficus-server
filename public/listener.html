@@ -41,7 +41,7 @@
 
       api.onInitialState = function (state)
       {
-        if (state.poll) startPoll(poll);
+        if (state.poll) startPoll(state.poll);
       }
 
       function startPoll (poll)
@@ -52,11 +52,11 @@
         for (var i = 0; i < totalOpts; ++i)
         {
           var opt = poll.options[i];
-          html += '<button data-index="' + i + '">' + opt.name + '</button>'
+          html += '<button data-index="' + i + '">' + opt.label + '</button>'
         }
 
         $pollOpts.html(html);
-        $pollName.html('Poll "' + poll.name + '":');
+        $pollName.html('Poll "' + poll.title + '":');
       };
 
       api.onPollEnded = function ()

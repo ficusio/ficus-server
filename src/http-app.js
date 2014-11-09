@@ -89,6 +89,17 @@ router.get('/presenter', function* ()
 });
 
 
+router.get('/test-presenter', function* ()
+{
+  var presentation = store.getPresentationById(uuid(), true),
+      clientData = updateCookie(this, presentation, uuid());
+
+  presentation.setPresenterId(clientData.clientId);
+  
+  return yield* sendFile(this, 'presenter.html');
+});
+
+
 app.use(router.middleware());
 
 

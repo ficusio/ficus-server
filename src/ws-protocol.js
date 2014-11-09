@@ -22,13 +22,18 @@ module.exports = {
     // messages to presenter
     out_pres_total_listeners: 'total',
     out_pres_audience_mood: 'mood',
-    out_pres_question: 'question'
+    out_pres_question: 'question',
+    out_pres_poll_results: 'poll_results'
   },
   presentation_state:
   {
     not_started: 'not_started',
     active: 'active',
     ended: 'ended'
+  },
+  message_type: {
+    inapp: 'inapp',
+    twitter: 'twitter'
   },
   code:
   {

@@ -1,4 +1,5 @@
-var debug = require('debug')('app:store');
+var debug = require('debug')('app:store'),
+    P = require('./ws-protocol');
 
 
 function stringify(obj)
@@ -13,14 +14,14 @@ class Presentation
   constructor (id)
   {
     this.id = id;
-    this.started = false;
-    this.finished = false;
+    this.state = P.presentation_state.not_started;
     this.totalClients = 0;
     this.clientsById = {};
     this.presenterId = null;
     this.messages = [];
     this.slideId = null;
     this.polls = [];
+    this.pollsById = {};
     this.poll = null;
     this.debug = require('debug')(`app:store:Presentation<${ id }>`);
   }
@@ -35,7 +36,15 @@ class Presentation
 
   start ()
   {
-    this.started = true;
+    this.state = P.presentation_state.active;
+    this.debug('started');
+  }
+
+
+  finish ()
+  {
+    this.state = P.presentation_state.ended;
+    this.debug('finished');
   }
 
 
@@ -46,15 +55,21 @@ class Presentation
   }
 
 
-  startPoll (poll)
+  startPollAndGetEmptyResults (poll)
   {
+    if (this.pollsById[ poll.id ])
+    {
+      return this.debug('poll was already started');
+    }
     var pollWithResults = {
       poll: poll,
       results: emptyPollResultsForPoll(poll)
     };
     this.polls.push(pollWithResults);
+    this.pollsById[ poll.id ] = pollWithResults;
     this.poll = pollWithResults;
     this.debug('poll started:', stringify(this.poll));
+    return pollWithResults.results;
   }
 
 
@@ -72,12 +87,18 @@ class Presentation
   }
 
 
+  getClientById (clientId)
+  {
+    return this.clientsById[ clientId ];
+  }
+
+
   addNewClientAndGetTotal (clientId)
   {
     var client = this.clientsById[ clientId ];
     if (client == null)
     {
-      this.clientsById[ clientId ] = { active: true };
+      this.clientsById[ clientId ] = createNewClientWithId(clientId);
       ++this.totalClients;
       this.debug(`new client added: ${ clientId }, now total ${ this.totalClients }`);
     }
@@ -126,17 +147,81 @@ class Presentation
   }
 
 
-  answerPollAndGetResults (client)
+  answerPollAndGetResults (clientId, optionIndex)
   {
+    var pollWithResults = this.poll;
+    if (pollWithResults == null)
+    {
+      return debug('answerPollAndGetResults: no active poll');
+    }
 
+    var { poll, results } = pollWithResults;
+    var totalOptions = results.length;
+
+    debug('results', results, 'totalOptions', totalOptions);
+
+    if (optionIndex >= totalOptions)
+    {
+      return debug('answerPollAndGetResults: invalid index');
+    }
+
+    var client = this.clientsById[ clientId ];
+    if (client == null)
+    {
+      return debug(`answerPollAndGetResults: client with id ${ clientId } not found`);
+    }
+
+    var prevOptionIndex = client.votesByPollId[ poll.id ];
+    debug('prevOptionIndex', prevOptionIndex);
+    if (prevOptionIndex == optionIndex)
+    {
+      return debug('answerPollAndGetResults: vote is not changed');
+    }
+
+    client.votesByPollId[ poll.id ] = optionIndex;
+
+    if (prevOptionIndex >= 0)
+    {
+      --results[ prevOptionIndex ].count;
+    }
+    ++results[ optionIndex ].count;
+
+    debug('now results', results);
+
+    var totalVoters = 0,
+        i;
+
+    for (i = 0; i < totalOptions; ++i)
+    {
+      totalVoters += results[i].count;
+    }
+
+    var normCoeff = (totalVoters == 0) ? 0 : 1 / totalVoters;
+
+    debug('totalVoters', totalVoters, 'normCoeff', normCoeff);
+
+    for (i = 0; i < totalOptions; ++i)
+    {
+      var result = results[i];
+      result.weight = result.count * normCoeff;
+      debug('  results[' + i + ']:', result);
+    }
+
+    debug('new poll vote, now results:', stringify(results));
+
+    return results;
   }
 
+}
 
-  finish ()
-  {
-    this.finished = true;
+
+function createNewClientWithId (clientId)
+{
+  return {
+    id: clientId,
+    active: true,
+    votesByPollId: {}
   }
-
 }
 
 

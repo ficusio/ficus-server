@@ -15,7 +15,7 @@ var stateByPresentationId = {},
 
 function onNewConnection (sockJSConn)
 {
-  debug('new SockJS connection');
+  debug('new SockJS connection: ' + sockJSConn);
   
   var conn = new ClientConnection(sockJSConn);
   conn.once(MESSAGE.inp_init, onClientInit);
@@ -58,7 +58,67 @@ function onPresenter (conn, presentation, presentationState)
 
   // TODO: send initial state
 
+  conn.on(MESSAGE.inp_pres_start, onPresenterStart);
+  conn.on(MESSAGE.inp_pres_finish, onPresenterFinish);
+  conn.on(MESSAGE.inp_pres_poll_start, onPresenterPollStart);
+  conn.on(MESSAGE.inp_pres_poll_finish, onPresenterPollFinish);
+
   conn.once('close', onPresenterLeft);
+
+  var initialState = {
+    state: presentation.state,
+    totalClients: presentation.totalClients
+  };
+
+  if (presentation.slideId != null)
+  {
+    initialState.slideId = presentation.slideId;
+  }
+
+  if (presentation.poll != null)
+  {
+    initialState.poll = presentation.poll.poll;
+    initialState.pollResults = presentation.poll.results;
+  }
+
+  conn.send(MESSAGE.out_initial_state, initialState);
+}
+
+
+function onPresenterStart (conn)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  presentation.start();
+  broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
+}
+
+
+function onPresenterFinish (conn)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  presentation.finish();
+  broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
+}
+
+
+function onPresenterPollStart (conn, poll)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  var results = presentation.startPollAndGetEmptyResults(poll);
+  notifyPresenter(presentation, MESSAGE.out_pres_poll_results, results);
+  broadcast(presentation, MESSAGE.out_poll, poll);
+}
+
+
+function onPresenterPollFinish (conn)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  var results = presentation.stopPoll();
+  broadcast(presentation, MESSAGE.out_poll, false);
 }
 
 
@@ -76,9 +136,71 @@ function onClient (conn, presentation, presentationState)
   var newTotal = presentation.addNewClientAndGetTotal(clientId);
   notifyPresenter(presentation, MESSAGE.out_pres_total_listeners, newTotal);
 
-  // TODO: send initial state
+  conn.on(MESSAGE.inp_list_vote_up, onClientVoteUp);
+  conn.on(MESSAGE.inp_list_vote_down, onClientVoteDown);
+  conn.on(MESSAGE.inp_list_question, onClientQuestion);
+  conn.on(MESSAGE.inp_list_poll_vote, onClientPollVote);
 
   conn.once('close', onClientLeft);
+
+  var initialState = { state: presentation.state };
+
+  var client = presentation.getClientById(clientId),
+      pollWithResults;
+
+  if (pollWithResults = presentation.poll)
+  {
+    initialState.poll = pollWithResults.poll;
+
+    var pollVote = client.votesByPollId[ pollWithResults.poll.id ];
+    if (pollVote >= 0)
+    {
+      initialState.pollVote = pollVote;
+    }
+  }
+
+  conn.send(MESSAGE.out_initial_state, initialState);
+}
+
+
+function onClientVoteUp (conn)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  presentation.voteUp();
+  // TODO: calculate and update mood
+}
+
+
+function onClientVoteDown (conn)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  presentation.voteDown();
+  // TODO: calculate and update mood
+}
+
+
+function onClientQuestion (conn, msg)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  var message = {
+    type: P.message_type.inapp,
+    message: msg,
+    userId: conn.clientId,
+  };
+  presentation.addMessage(msg);
+  notifyPresenter(presentation, MESSAGE.out_pres_question, msg);
+}
+
+
+function onClientPollVote (conn, optionIndex)
+{
+  var presentation = store.getPresentationById(conn.presentationId);
+  if (presentation == null) return;
+  var pollResults = presentation.answerPollAndGetResults(conn.clientId, optionIndex);
+  pollResults && notifyPresenter(presentation, MESSAGE.out_pres_poll_results, pollResults);
 }
 
 
@@ -142,14 +264,14 @@ function notifyPresenter (presentation, type, data)
 var { stringifyMessage } = ClientConnection;
 
 
-function broadcast (presentationId, type, data)
+function broadcast (presentation, type, data)
 {
   debug(`~> presentation ${ presentation.id } broadcast <${ type }>:`, data);
 
   var str = stringifyMessage(type, data);
   if (str == null) return;
 
-  var { connections } = stateForPresentationId(presentationId),
+  var { connections } = stateForPresentationId(presentation.id),
       totalConnections = connections.length;
 
   debug(`   total ${ totalConnections } connections`);
