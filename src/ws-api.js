@@ -118,7 +118,7 @@ function onPresenterPollStart (conn, poll)
 {
   var presentation = store.getPresentationById(conn.presentationId);
   if (presentation == null) return;
-  var results = presentation.startPollAndGetEmptyResults(poll);
+  var results = presentation.startPollAndGetCurrentResults(poll);
   notifyPresenter(presentation, MESSAGE.out_pres_poll_results, results);
   broadcast(presentation, MESSAGE.out_poll, poll);
 }

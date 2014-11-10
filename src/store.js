@@ -71,7 +71,7 @@ class Presentation
   }
 
 
-  startPollAndGetEmptyResults (poll)
+  startPollAndGetCurrentResults (poll)
   {
     var pollWithResults = this.pollsById[ poll.id ];
     if (pollWithResults)
@@ -165,7 +165,7 @@ class Presentation
   }
 
 
-  _vote (clientId, delta)
+  _vote (clientId, sign)
   {
     var client = this.clientsById[ clientId ];
     if (client == null)
@@ -173,8 +173,8 @@ class Presentation
       return this.debug(`vote ${ clientId }: client not found`);
     }
     var time = Date.now();
-    client.moodVotes.push({ time, delta });
-    this.debug(`client ${ clientId } new mood vote:`, { time, delta });
+    client.moodVotes.push({ time, sign });
+    this.debug(`client ${ clientId } new mood vote:`, { time, sign });
   }
 
 
@@ -185,72 +185,45 @@ class Presentation
         totalClients = 0,
         meanMood = 0;
 
-    //this.debug('updateMood');
-
     for (var clientId in clientsById)
     {
       var client = clientsById[ clientId ],
           moodVotes = client.moodVotes,
           totalVotes = moodVotes.length,
           expiredVotes = 0,
+          lastChangeIndex = -1,
+          lastChangeSign = 0,
           clientMood = 0;
-
-      this.debug(`  client ${ clientId }, total votes: ${ totalVotes }`);
-
-      var lastChangeIndex = -1,
-          lastChangeSign = 0;
 
       for (var i = 0; i < totalVotes; ++i)
       {
-        var { time, delta } = moodVotes[i];
-
+        var { time, sign } = moodVotes[i];
         var timePassed = timeNow - time;
+        
         if (timePassed > MOOD_EXPIRY_TIME)
         {
           ++expiredVotes;
         }
-        else if (delta != lastChangeSign)
+        else if (sign != lastChangeSign)
         {
-          lastChangeSign = delta;
+          lastChangeSign = sign;
           lastChangeIndex = i;
         }
       }
 
-      this.debug('  lastChange sign ' + lastChangeSign + ', index ' + lastChangeIndex + ', time ' + timePassed);
-
       if (expiredVotes > 0)
-      {
         moodVotes.splice(0, expiredVotes);
-      }
 
-      if (lastChangeSign != 0)
-      {
-        clientMood = lastChangeSign * Math.min(1, Math.max(0, 1 - timePassed / MOOD_EXPIRY_TIME));
-      }
-      else {
-        clientMood = 0;
-      }
-
-      //this.debug(`    client mood: ${ clientMood }`);
+      clientMood = (lastChangeSign == 0)
+        ? 0
+        : lastChangeSign * Math.min(1, Math.max(0, 1 - timePassed / MOOD_EXPIRY_TIME))
 
       meanMood += clientMood;
-
-      //this.debug(`    mood now: ${ meanMood }`);
-
       ++totalClients;
     }
 
-    //this.debug(`  total clients: ${ meanMood }`);
-
     if (totalClients > 0)
-    {
       meanMood /= totalClients;
-    }
-    else {
-      meanMood = 0;
-    }
-
-    //this.debug(`  mean mood: ${ meanMood }`);
 
     this.meanMood = meanMood;
     return meanMood;
@@ -277,47 +250,31 @@ class Presentation
 
     var client = this.clientsById[ clientId ];
     if (client == null)
-    {
       return this.debug(`answerPollAndGetResults: client with id ${ clientId } not found`);
-    }
 
     var prevOptionIndex = client.votesByPollId[ poll.id ];
-    this.debug('prevOptionIndex', prevOptionIndex);
     if (prevOptionIndex == optionIndex)
-    {
       return this.debug('answerPollAndGetResults: vote is not changed');
-    }
 
     client.votesByPollId[ poll.id ] = optionIndex;
 
     if (prevOptionIndex >= 0)
-    {
       --results[ prevOptionIndex ].count;
-    }
     ++results[ optionIndex ].count;
-
-    this.debug('now results', results);
 
     var totalVoters = 0,
         i;
 
     for (i = 0; i < totalOptions; ++i)
-    {
       totalVoters += results[i].count;
-    }
 
     var normCoeff = (totalVoters == 0) ? 0 : 1 / totalVoters;
-
-    this.debug('totalVoters', totalVoters, 'normCoeff', normCoeff);
 
     for (i = 0; i < totalOptions; ++i)
     {
       var result = results[i];
       result.weight = result.count * normCoeff;
-      this.debug('  results[' + i + ']:', result);
     }
-
-    this.debug('new poll vote, now results:', stringify(results));
 
     return results;
   }
