@@ -1,11 +1,13 @@
 Node.js backend for Feynman/Ficus project.
+==============================================
 
 Source ES6 code is transformed into ES5 with [6to5](https://github.com/6to5/6to5).
 Uses [SockJS](https://github.com/sockjs/sockjs-node) for WebSocket protocol implementation.
 
 Currently this is an early prototype, so don't expect it to be hugely useful :)
 
-Installation and running in dev mode:
+Installation and running
+----------------------------------------------
 
 ```bash
 $ mkdir feynman && cd feynman
@@ -21,7 +23,7 @@ $ rm -rf server/public/* && cp -Rf presenter/public/. listener/public/. server/p
 # configure server
 $ cd server
 $ npm install
-$ vi config.dev.json # configure hostname, port and Twitter credentials
+$ vi config.dev.json # configure host, port, hostname and Twitter credentials
 # start server
 $ npm start
 ```
@@ -29,7 +31,9 @@ $ npm start
 Note: at the moment `npm install` in `server` fails because of [this issue in 6to5](https://github.com/6to5/6to5/issues/137).
 Hopefully it will be resolved soon.
 
-HTTP interface:
-* `/register-presentation/$id`: register a new presentation with id `$id` and become a presenter for this presentation;
-* `/presenter`: presenter interface;
-* `/`: listener interface.
+Usage of the prototype
+----------------------------------------------
+
+1. Register new session and become it's presenter (`$id` is a unique name if this session): `http://$hostname/register-presentation/$id`;
+2. open presenter interface `http://$hostname/presenter`;
+3. invide audience to open listener interface `http://$hostname`.
