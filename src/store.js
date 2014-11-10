@@ -77,7 +77,7 @@ class Presentation
     if (pollWithResults)
     {
       this.debug('poll was already started');
-      return pollWithResults;
+      return pollWithResults.results;
     }
     pollWithResults = {
       poll: poll,
