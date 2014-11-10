@@ -28,9 +28,6 @@ $ vi config.dev.json # configure host, port, hostname and Twitter credentials
 $ npm start
 ```
 
-Note: at the moment `npm install` in `server` fails because of [this issue in 6to5](https://github.com/6to5/6to5/issues/137).
-Hopefully it will be resolved soon.
-
 Usage of the prototype
 ----------------------------------------------
 
