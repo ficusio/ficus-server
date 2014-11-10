@@ -31,6 +31,6 @@ $ npm start
 Usage of the prototype
 ----------------------------------------------
 
-1. Register new session and become it's presenter (`$id` is a unique name if this session): `http://$hostname/register-presentation/$id`;
+1. Register new session and become it's presenter (`$id` is a unique identifier of this session): `http://$hostname/register-presentation/$id`;
 2. open presenter interface `http://$hostname/presenter`;
-3. invide audience to open listener interface `http://$hostname`.
+3. invide audience to open listener interface `http://$hostname/`.
