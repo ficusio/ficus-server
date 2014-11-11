@@ -15,15 +15,12 @@ $ mkdir feynman && cd feynman
 $ git clone https://github.com/codehipsters/feynman-server.git server
 $ git clone https://github.com/codehipsters/feynman-presenter.git presenter
 $ git clone https://github.com/codehipsters/feynman-listener.git listener
-# build presenter and listener
-$ cd presenter && npm install && bower install && brunch build --production && cd ..
-$ cd listener && npm install && bower install && brunch build --production && cd ..
-# copy static files to server
-$ rm -rf server/public && mkdir -p server/public && cp -Rf {presenter,listener}/public/. server/public/
 # configure server
 $ cd server
 $ npm install
 $ vi config.dev.json # configure host, port, hostname and Twitter credentials
+# build and copy static files for presenter and listener apps
+$ ./build-static.sh
 # start server
 $ npm start
 ```
@@ -31,6 +28,7 @@ $ npm start
 Usage of the prototype
 ----------------------------------------------
 
-1. Register new session and become it's presenter (`$id` is a unique identifier of this session): `http://$hostname/register-presentation/$id`;
+1. Register new session and become it's presenter: `http://$hostname/register-presentation/$id`;
+   `$id` is an unique identifier of this session;
 2. open presenter interface `http://$hostname/presenter`;
-3. invide audience to open listener interface `http://$hostname/`.
+3. invite audience to open listener interface `http://$hostname/`.
