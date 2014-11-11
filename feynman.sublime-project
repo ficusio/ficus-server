@@ -1,0 +1,20 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"folder_exclude_patterns": ["node_modules"],
+			"follow_symlinks": true
+		},
+		{
+			"path": "../presenter",
+			"folder_exclude_patterns": ["node_modules", "bower_components"],
+			"follow_symlinks": true
+		},
+		{
+			"path": "../listener",
+			"folder_exclude_patterns": ["node_modules", "bower_components"],
+			"follow_symlinks": true
+		}
+	]
+}
