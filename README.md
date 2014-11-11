@@ -19,7 +19,7 @@ $ git clone https://github.com/codehipsters/feynman-listener.git listener
 $ cd presenter && npm install && bower install && brunch build --production && cd ..
 $ cd listener && npm install && bower install && brunch build --production && cd ..
 # copy static files to server
-$ rm -rf server/public/* && cp -Rf presenter/public/. listener/public/. server/public/
+$ rm -rf server/public && mkdir -p server/public && cp -Rf {presenter,listener}/public/. server/public/
 # configure server
 $ cd server
 $ npm install
