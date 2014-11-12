@@ -1,4 +1,4 @@
-Node.js backend for Feynman/Ficus project.
+Node.js backend for Feynman/Ficus project
 ==============================================
 
 Source ES6 code is transformed into ES5 with [6to5](https://github.com/6to5/6to5).
@@ -28,7 +28,7 @@ $ npm start
 Usage of the prototype
 ----------------------------------------------
 
-1. Register new session and become it's presenter: `http://$hostname/register-presentation/$id`;
+1. Register new session and become its presenter: `http://$hostname/register-presentation/$id`;
    `$id` is an unique identifier of this session;
 2. open presenter interface `http://$hostname/presenter`;
 3. invite audience to open listener interface `http://$hostname/`.
