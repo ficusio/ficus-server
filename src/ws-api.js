@@ -14,7 +14,7 @@ var debug = require('debug')('app:ws-api'),
 
 var stateByPresentationId = {},
     connectionsByClientId = {},
-    MEAN_MOOD_INTERVAL = 1000,
+    MEAN_MOOD_UPDATE_INTERVAL = 500,
     meanMoodIntvId = -1,
     twitterWatcher;
 
@@ -96,7 +96,7 @@ function onPresenterStart (conn)
   var presentation = store.getPresentationById(conn.presentationId);
   if (presentation && presentation.start()) {
     broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
-    startMeanMoodTimer();
+    startMeanMoodWatchingForPresentation(presentation);
     startWatchingTwitter();
   }
 }
@@ -108,7 +108,7 @@ function onPresenterFinish (conn)
   if (presentation && presentation.finish())
   {
     broadcast(presentation, MESSAGE.out_presentation_state, presentation.state);
-    stopMeanMoodTimer();
+    stopMeanMoodWatchingForPresentation(presentation);
     stopWatchingTwitter();
   }
 }
@@ -292,16 +292,18 @@ function broadcast (presentation, type, data)
 }
 
 
-function stateForPresentationId (presentationId)
+function stateForPresentationId (presentationId, createIfMissing = true)
 {
   var state = stateByPresentationId[ presentationId ];
-  if (state == null)
+  if (state == null && createIfMissing)
   {
     stateByPresentationId[ presentationId ] = state = 
     {
       presentationId: presentationId,
-      presenter: null,
-      connections: []
+      connections: [],
+      presenter: undefined,
+      moodTimerId: undefined,
+      lastReportedMood: undefined
     };
     debug(`created an empty state for presentation with id ${ presentationId }`);
   }
@@ -319,32 +321,48 @@ function cleanUpPresentationStateIfNeeded (presentationState)
 }
 
 
-function startMeanMoodTimer ()
+function startMeanMoodWatchingForPresentation (presentation)
 {
-  meanMoodIntvId = setInterval(updateMeanMood, MEAN_MOOD_INTERVAL);
+  var presentationId = presentation.id,
+      state = stateForPresentationId(presentationId, false);
+
+  if (state == null)
+    return debug(`no state found for presentation ${ presentationId }`);
+
+  state.meanMoodIntvId = setInterval(() => {
+    try {
+      updateMeanMood(presentation, state);
+    }
+    catch (e) {
+      console.error(`error updating mean mood for presentation ${ presentationId }: ${
+        (e && e.stack) || e
+      }`);
+    }
+  }, MEAN_MOOD_UPDATE_INTERVAL);
 }
 
 
-function stopMeanMoodTimer ()
+function stopMeanMoodWatchingForPresentation (presentation)
 {
-  clearInterval(meanMoodIntvId);
-}
-
-
-function updateMeanMood ()
-{
-  try 
+  var state = stateForPresentationId(presentation.id, false);
+  if (state && state.meanMoodIntvId != null)
   {
-    var presentation = store.getActivePresentation();
-    if (presentation == null) return;
-    var mood = presentation.updateMood();
+    clearInterval(state.meanMoodIntvId);
+    state.meanMoodIntvId = undefined;
+  }
+}
+
+
+function updateMeanMood (presentation, state)
+{
+  var mood = Math.floor( 100 * presentation.updateMood() ) / 100;
+  if (mood != state.lastReportedMood)
+  {
+    state.lastReportedMood = mood;
     notifyPresenter(presentation, MESSAGE.out_pres_audience_mood, mood);
   }
-  catch (e)
-  {
-    console.error('error updating mean mood:', (e && e.stack) || e);
-  }
 }
+
 
 function startWatchingTwitter (hashtag = null)
 {
@@ -363,6 +381,7 @@ function startWatchingTwitter (hashtag = null)
   }
 }
 
+
 function stopWatchingTwitter ()
 {
   if (twitterWatcher)
@@ -372,6 +391,7 @@ function stopWatchingTwitter ()
     twitterWatcher = null;
   }
 }
+
 
 function onNewTweet (tweet)
 {
