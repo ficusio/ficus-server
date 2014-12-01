@@ -10,11 +10,11 @@ Installation and running
 ----------------------------------------------
 
 ```bash
-$ mkdir feynman && cd feynman
+$ mkdir ficus && cd ficus
 # clone all components
-$ git clone https://github.com/codehipsters/feynman-server.git server
-$ git clone https://github.com/codehipsters/feynman-presenter.git presenter
-$ git clone https://github.com/codehipsters/feynman-listener.git listener
+$ git clone https://github.com/ficusio/ficus-server.git server
+$ git clone https://github.com/ficusio/ficus-presenter.git presenter
+$ git clone https://github.com/ficusio/ficus-listener.git listener
 # configure server
 $ cd server
 $ npm install
@@ -28,7 +28,7 @@ $ npm start
 Usage of the prototype
 ----------------------------------------------
 
-1. Register new session and become its presenter: `http://$hostname/register-presentation/$id`;
+1. Register a new session and become its presenter: `http://$hostname/register-presentation/$id`;
    `$id` is an unique identifier of this session;
 2. open presenter interface `http://$hostname/presenter`;
 3. invite audience to open listener interface `http://$hostname/`.
