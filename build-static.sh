@@ -4,7 +4,7 @@ set -e # immediately fail on any error
 
 build-static () {
   echo "building ${1} static files..."
-  cd "../${1}" && npm install && bower install && rm -rf public && brunch build --production
+  cd "../${1}" && npm install && ./node_modules/.bin/bower install && rm -rf public && ./node_modules/.bin/brunch build --production
 }
 
 build-static presenter
