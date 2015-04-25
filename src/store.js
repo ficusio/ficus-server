@@ -230,7 +230,7 @@ class Presentation
   }
 
 
-  answerPollAndGetResults (clientId, optionIndex)
+  answerPollAndGetResults (clientId, indices)
   {
     var pollWithResults = this.poll;
     if (pollWithResults == null)
@@ -243,24 +243,30 @@ class Presentation
 
     this.debug('results', results, 'totalOptions', totalOptions);
 
-    if (optionIndex >= totalOptions)
-    {
-      return this.debug('answerPollAndGetResults: invalid index');
-    }
-
     var client = this.clientsById[ clientId ];
     if (client == null)
       return this.debug(`answerPollAndGetResults: client with id ${ clientId } not found`);
 
-    var prevOptionIndex = client.votesByPollId[ poll.id ];
-    if (prevOptionIndex == optionIndex)
-      return this.debug('answerPollAndGetResults: vote is not changed');
+    if (!(indices instanceof Array)) {
+      indices = [ indices ]
+    }
 
-    client.votesByPollId[ poll.id ] = optionIndex;
+    var prevIndices = client.votesByPollId[ poll.id ] || [];
+    client.votesByPollId[ poll.id ] = indices || [];
 
-    if (prevOptionIndex >= 0)
-      --results[ prevOptionIndex ].count;
-    ++results[ optionIndex ].count;
+    for (let i = 0; i < indices.length; ++i) {
+      let idx = indices[ i ]
+      if (prevIndices.indexOf( idx ) == -1) {
+        ++results[ idx ].count
+      }
+    }
+
+    for (let i = 0; i < prevIndices.length; ++i) {
+      let idx = prevIndices[ i ]
+      if (indices.indexOf( idx ) == -1) {
+        --results[ idx ].count
+      }
+    }
 
     var totalVoters = 0,
         i;
