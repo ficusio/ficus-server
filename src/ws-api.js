@@ -194,6 +194,7 @@ function onClientQuestion (conn, msg)
 {
   var presentation = store.getPresentationById(conn.presentationId);
   if (presentation == null) return;
+  msg = escapeHTML(msg)
   var message = {
     type: P.message_type.inapp,
     message: msg,
@@ -402,7 +403,22 @@ function onNewTweet (tweet)
 
   notifyPresenter(presentation, MESSAGE.out_pres_question, {
     type: 'twitter',
-    message: tweet.text,
-    userId: tweet.user
+    message: escapeHTML(tweet.text),
+    userId: escapeHTML(tweet.user)
   });
+}
+
+
+function escapeHTML (html)
+{
+  html = '' + html
+  if (html.indexOf('<script') != -1 || html.indexOf('<img') != -1 || /<\/[\w\d]+/.test(html)) {
+    return "Простите, атака XSS временно не работает =("
+  }
+  return String(html)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
